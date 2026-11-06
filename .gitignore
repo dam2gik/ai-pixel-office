@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/
+.protocol/
+.test-data/
+test-results/
+*.log
+.npm-cache/
+.env
+.env.*
+!.env.example

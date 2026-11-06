@@ -1,0 +1,22 @@
+{
+  "name": "pixel-office",
+  "version": "0.3.0",
+  "private": true,
+  "description": "A local pixel office for collaborative Codex agents",
+  "author": "Pixel Office",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "npm run build && node scripts/start.cjs",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build --configLoader native",
+    "test": "node --test tests/*.test.cjs",
+    "check:codex": "node scripts/check-codex.cjs",
+    "test:ui": "node scripts/ui-test.cjs",
+    "package": "npm run build && electron-builder --win portable"
+  },
+  "dependencies": { "three": "^0.180.0" },
+  "devDependencies": { "electron": "^45.2.3", "electron-builder": "^26.0.12", "vite": "^7.1.0", "playwright": "^1.56.0" },
+  "overrides": { "minimatch@>=7 <11.0.1": "^11.0.1" },
+  "build": { "appId": "studio.pixeloffice.desktop", "productName": "Pixel Office", "files": ["dist/**", "electron/**", "package.json"], "win": { "target": "portable", "signAndEditExecutable": false }, "directories": { "output": "release" } }
+}
