@@ -1,6 +1,6 @@
 {
   "name": "pixel-office",
-  "version": "0.3.0",
+  "version": "0.16.0",
   "private": true,
   "description": "A local pixel office for collaborative Codex agents",
   "author": "Pixel Office",
@@ -11,12 +11,55 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build --configLoader native",
     "test": "node --test tests/*.test.cjs",
+    "benchmark:events": "node scripts/benchmark-events.cjs",
     "check:codex": "node scripts/check-codex.cjs",
     "test:ui": "node scripts/ui-test.cjs",
-    "package": "npm run build && electron-builder --win portable"
+    "test:review-ui": "node scripts/project-review-ui.cjs",
+    "test:campus-ui": "node scripts/campus-ui.cjs",
+    "test:character-ui": "node scripts/character-ui.cjs",
+    "package": "npm run build && electron-builder --win portable",
+    "test:visual-quality": "node scripts/visual-quality.cjs",
+    "test:furniture-preset-ui": "node scripts/furniture-preset-ui.cjs",
+    "test:basement-ui": "node scripts/basement-ui.cjs",
+    "test:elevator-ui": "node scripts/elevator-ui.cjs",
+    "test:deep-campus-ui": "node scripts/deep-campus-ui.cjs",
+    "test:game-ui": "node scripts/game-ui.cjs",
+    "test:free-camera-ui": "node scripts/free-camera-ui.cjs",
+    "test:exterior-ui": "node scripts/exterior-ui.cjs",
+    "test:section-ui": "node scripts/section-ui.cjs",
+    "test:lighting-ui": "node scripts/lighting-ui.cjs",
+    "test:interface-ui": "node scripts/interface-ui.cjs",
+    "test:high-campus-ui": "node scripts/high-campus-ui.cjs",
+    "test:floor-shortcuts-ui": "node scripts/floor-shortcuts-ui.cjs",
+    "generate:mine-terrain": "node scripts/generate-mine-terrain.cjs",
+    "generate:game-world": "node scripts/generate-game-world.cjs"
   },
-  "dependencies": { "three": "^0.180.0" },
-  "devDependencies": { "electron": "^45.2.3", "electron-builder": "^26.0.12", "vite": "^7.1.0", "playwright": "^1.56.0" },
-  "overrides": { "minimatch@>=7 <11.0.1": "^11.0.1" },
-  "build": { "appId": "studio.pixeloffice.desktop", "productName": "Pixel Office", "files": ["dist/**", "electron/**", "package.json"], "win": { "target": "portable", "signAndEditExecutable": false }, "directories": { "output": "release" } }
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.1.0",
+    "playwright": "^1.56.0"
+  },
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "^11.0.1"
+  },
+  "build": {
+    "appId": "studio.pixeloffice.desktop",
+    "productName": "Pixel Office",
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
 }

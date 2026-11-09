@@ -1,0 +1,29 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {EventEmitter}=require('node:events'),{Engine}=require('../electron/engine.cjs');
+(async()=>{
+ const {createServer}=await import('vite'),server=await createServer({configFile:false,server:{host:'127.0.0.1',port:5194,watch:{ignored:['**/release/**','**/test-results/**']}}});await server.listen();
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'office-exterior-')),engine=new Engine(path.join(folder,'office.json'),new EventEmitter());engine.furnishOfficeOnce();let browser;
+ try{
+  browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const page=await browser.newPage({viewport:{width:1540,height:980}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.exposeFunction('getOffice',()=>({state:engine.snapshot(),connection:{}}));
+  await page.addInitScript(()=>{localStorage.setItem('pixelOffice.ambient','off');window.office={get:()=>window.getOffice(),onState:()=>{},onLive:()=>{},onConnection:()=>{},onVisibility:()=>{}};});
+  await page.route('**/favicon.ico',r=>r.fulfill({status:204,body:''}));await page.goto('http://127.0.0.1:5194');await page.waitForFunction(()=>window.readOfficeRenderStats?.().frames>0);
+  const stats=()=>page.evaluate(()=>window.readOfficeRenderStats()),dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+  await page.locator('[data-floor="-4"]').click();await page.waitForTimeout(200);const inside=await stats(),initial=JSON.stringify(engine.state);
+  await page.locator('[data-environment=outside]').click();await page.waitForFunction(()=>window.readOfficeRenderStats().exterior.trafficTime>0);let outside=await stats();
+  assert.equal(outside.environment,'outside');assert.equal(outside.exterior.trafficCount,16);assert.equal(outside.exterior.parkingSpaces,24);assert.equal(outside.exterior.parkedCars,16);assert.ok(outside.exterior.trees>=20);
+  assert.equal(await page.locator('.floor-switch').isVisible(),false);assert.equal(await page.locator('#outsideNav').isVisible(),true);assert.equal(await page.locator('.world-labels').isVisible(),false);
+  const first=outside.exterior.cars[0];await page.waitForFunction(t=>window.readOfficeRenderStats().exterior.trafficTime>t+.3,outside.exterior.trafficTime);outside=await stats();assert.ok(Math.hypot(first.x-outside.exterior.cars[0].x,first.z-outside.exterior.cars[0].z)>.5);
+  assert.ok(outside.drawCalls<220,JSON.stringify({calls:outside.drawCalls}));assert.ok(outside.triangles<250000);
+  await page.locator('#trafficToggle').click();await page.waitForTimeout(500);const paused=await stats();await page.waitForTimeout(800);const still=await stats();assert.equal(still.exterior.trafficTime,paused.exterior.trafficTime);assert.ok(still.frames-paused.frames<4);
+  fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/exterior-campus.png'});
+  for(const area of ['building','parking','park']){await page.locator('[data-outside-focus='+area+']').click();await page.waitForTimeout(300);await page.screenshot({path:'test-results/exterior-'+area+'.png'});}
+  await page.locator('#freeCamera').click();assert.equal((await stats()).cameraMode,'free');assert.ok((await stats()).cameraPosition[1]>0);const free=(await stats()).cameraPosition;await page.keyboard.down('w');await page.waitForFunction(p=>Math.hypot(...window.readOfficeRenderStats().cameraPosition.map((v,i)=>v-p[i]))>1.2,free);await page.keyboard.up('w');await page.waitForFunction(()=>window.readOfficeRenderStats().renderPixelRatio===window.readOfficeRenderStats().pixelRatio);assert.ok(dist(free,(await stats()).cameraPosition)>1);
+  await page.locator('[data-environment=inside]').click();await page.waitForTimeout(300);const restored=await stats();assert.equal(restored.environment,'inside');assert.equal(restored.floor,'-4');assert.ok(dist(inside.cameraPosition,restored.cameraPosition)<.001);assert.equal(await page.locator('.floor-switch').isVisible(),true);assert.equal(JSON.stringify(engine.state),initial,'view mode must not mutate office, economy, or agent state');
+  await page.locator('[data-environment=outside]').click();await page.locator('#trafficToggle').click();await page.waitForFunction(t=>window.readOfficeRenderStats().exterior.trafficTime>t,still.exterior.trafficTime);
+  await page.setViewportSize({width:650,height:800});await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:'test-results/exterior-mobile.png'});await page.locator('#freeCamera').click();const overlaps=await page.evaluate(()=>{const a=document.querySelector('.environment-switch').getBoundingClientRect(),b=document.querySelector('#freeCameraHelp').getBoundingClientRect();return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;});assert.equal(overlaps,false,'mobile camera help must not cover view switch');
+  await page.locator('[data-environment=inside]').click();assert.equal((await stats()).environment,'inside');assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({pass:true,drawCalls:outside.drawCalls,triangles:outside.triangles,trafficPools:outside.exterior.trafficPools,traffic:16,parked:16,spaces:24,trees:outside.exterior.trees,checks:'enclosed exterior, four campus views, moving/paused traffic, idle render stop, free flight, original floor/camera restore, unchanged state, mobile'}));
+ }finally{clearTimeout(engine.changeTimer);await browser?.close();await server.close();fs.rmSync(folder,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

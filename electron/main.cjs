@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
 const { Codex } = require('./codex.cjs');
 const { Engine } = require('./engine.cjs');
+const { listArtifacts, readArtifact } = require('./artifacts.cjs');
+const { createRequestStarter } = require('./request-start.cjs');
 let win, engine, codex, connection = { connected: false };
 if (process.env.PIXEL_OFFICE_DATA) app.setPath('userData', path.resolve(process.env.PIXEL_OFFICE_DATA));
 const send = (topic, value) => { if (win && !win.isDestroyed()) win.webContents.send(topic, value); };
@@ -13,26 +15,34 @@ function handle(name, fn) {
 }
 app.whenReady().then(() => {
   codex = new Codex(); engine = new Engine(path.join(app.getPath('userData'), 'office.json'), codex);
+  engine.furnishOfficeOnce();
+  engine.on('game',game=>send('office:game',game));engine.startGameplay();
   engine.on('state', s => send('office:state', s)); engine.on('live', s => send('office:live', s));
+  engine.on('persistenceError', message => send('office:error',`작업 기록을 저장할 수 없습니다. ${message}`));
   engine.on('connection', c => { connection = c; send('office:connection', c); });
   engine.on('codexNotification', async ({ method, params }) => {
     if (method === 'account/login/completed' || method === 'account/updated') {
       try { const a = await codex.request('account/read'); connection = { ...connection, account: a.account, loginError: params.error || '' }; send('office:connection', connection); } catch {}
     }
   });
+  handle('office:gameCommand',command=>engine.gameCommand(command));
   handle('office:get', () => ({ state: engine.snapshot(), connection }));
+  handle('office:listArtifacts', (projectId, agentId) => listArtifacts(engine.state, projectId, agentId));
+  handle('office:readArtifact', (projectId, agentId, taskId, file) => readArtifact(engine.state, projectId, agentId, taskId, file));
   handle('office:fullscreen', value => { win.setFullScreen(typeof value === 'boolean' ? value : !win.isFullScreen()); return win.isFullScreen(); });
   handle('office:close', () => win.close());
   handle('office:settings', s => engine.settings(s));
+  handle('office:completeProject', projectId => engine.completeProject(projectId));
   handle('office:addAgent', a => engine.addAgent(a));
+  handle('office:updateAppearance',(id,patch)=>engine.updateAppearance(id,patch));
   handle('office:furniture', type => engine.addFurniture(type));
-  handle('office:start', async goal => {
-    if (engine.state.settings.mode === 'codex') {
-      const { account } = await codex.request('account/read');
-      if (account?.type !== 'chatgpt') throw new Error('ChatGPT 계정 로그인이 필요합니다. 설정에서 로그인해 주세요.');
-    }
-    return engine.start(goal);
-  });
+  handle('office:moveFurniture',(id,patch)=>engine.moveFurniture(id,patch));
+  handle('office:removeFurniture',id=>engine.removeFurniture(id));
+  handle('office:validateFurniture',(id,patch)=>engine.validateFurniture(id,patch));
+  handle('office:start', createRequestStarter(engine,codex,()=>dialog.showOpenDialog(win,{
+    properties:['openDirectory','createDirectory'],title:'이번 업무의 프로젝트 폴더 선택',buttonLabel:'이 폴더로 업무 시작',
+    ...(engine.state.settings.workspace?{defaultPath:engine.state.settings.workspace}:{})
+  })));
   handle('office:steer', (projectId, agentId, text) => engine.steer(projectId, agentId, text));
   handle('office:stop', projectId => engine.stop(projectId));
   handle('office:resume', async projectId => {
@@ -94,8 +104,8 @@ app.whenReady().then(() => {
       const choice = dialog.showMessageBoxSync(win, { type: 'question', buttons: ['계속 작업', '중단하고 종료'], defaultId: 0, cancelId: 0, message: '진행 중인 업무가 있습니다.', detail: '종료하면 Codex 실행이 중단됩니다. 다음 실행에서 미완료 업무를 다시 시작할 수 있습니다.' });
       if (choice === 0) { e.preventDefault(); return; }
     }
-    engine.persist(); codex.close();
+    engine.stopGameplay();engine.persist(); codex.close();
   });
 });
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { app.isQuitting = true; codex?.close(); });
+app.on('before-quit', () => { app.isQuitting = true;engine?.stopGameplay(); codex?.close(); });

@@ -1,28 +1,53 @@
+import {FLOOR_IDS} from './floors.js';
+import {buildDeepCampus} from './deep-campus.js';
+import {slabWithVoids} from './slab-geometry.js';
+import {LIFT} from './transport-config.js';
 import { ROOMS, deskPosition } from './office-life.js';
+import {buildBasement} from './basement-map.js';
+import {createArchitecture} from './architecture.js';
+import {buildCampus} from './campus-map.js';
+import {buildHighFloors} from './high-floor-map.js';
 
-export function buildMap({room,box,plant}){
-  const obstacles=[];
+export function buildMap({room,upper,garden,stairs,structure,basement=room,basementStairs=room,deepFloors={},highFloors={},box,plant}){
+  const obstacles=[],architecture=createArchitecture({box,obstacles});
   const solid=(x,y,z,w,h,d,color)=>{box(room,x,y,z,w,h,d,color);obstacles.push({x,z,w,d});};
-  box(room,0,-.4,0,32,.7,22,'#bbc3b0');
-  for(let x=-15.5;x<16;x++)for(let z=-10.5;z<11;z++){
-    let colors=z>3?(x<2?['#d9e2d2','#e0e8d9']:['#e6dfeb','#eee7f1']):z<.3?(x<2.3?['#e6ddc8','#eee5d1']:x<10.5?['#e5d3b6','#eddcc1']:['#cfe1dc','#dcebe6']):['#eeeade','#f6f2e6'];
-    box(room,x,-.015,z,.985,.08,.985,colors[(Math.round(x+z)+32)%2]);
+  slabWithVoids({root:room,box,x:-2,y:-.4,z:1,w:40,h:.7,d:26,color:'#bbc3b0',voids:[{x:-20.5,z:.85,w:2.4,d:9.5},{x:LIFT.x,z:LIFT.z,w:3.1,d:2.8}]});
+  for(let x=-15.75;x<16;x+=.5)for(let z=-10.75;z<11;z+=.5){
+    const finish=z>.3&&z<3.55?'marble':z<.3&&x>10.5?'tile':z<.3&&x>2.4?'marble':'wood';
+    const color=finish==='wood'?(z>3.55?'#bf9a70':'#d0b28b'):finish==='marble'?'#e5e4dc':'#c7d7d0';
+    box(room,x,-.015,z,.493,.08,.493,color,finish);
   }
-  solid(0,1.8,-10.9,32,3.6,.2,'#f5f1e5');solid(-15.9,1.8,0,.2,3.6,22,'#e6e9dc');solid(15.9,.65,0,.2,1.3,22,'#e6e9dc');
-  for(let x=-13;x<=8;x+=3.4){box(room,x,2.1,-10.73,2.7,2,.12,'#aac8c3');box(room,x,2.1,-10.62,.1,2.05,.08,'#faf9ed');box(room,x,2.1,-10.61,2.75,.1,.09,'#faf9ed');box(room,x,1.1,-10.48,2.9,.13,.4,'#cdc7b4');}
-  // Half-height dollhouse partitions retain sightlines. Gaps are real navigable doors.
-  solid(2.4,.65,-5.4,.18,1.3,10.6,'#d1d9c8');solid(10.5,1.1,-5.4,.18,2.2,10.6,'#d9e5df');
-  for(const [x,w] of [[4,3.2],[8.8,3.4],[11.4,1.6],[15,1.8]])solid(x,.65,.35,w,1.3,.18,'#d9ddcf');
-  for(const [x,w] of [[-12.4,6.8],[-2.7,5.4],[3.7,2.6],[11.6,8.6]])solid(x,.62,3.55,w,1.24,.18,'#c8d3c1');
-  solid(2.4,.65,7.25,.18,1.3,7.3,'#d4ccdc');
-  // Soft glass partition frames around the meeting doorway, no collision across the gap.
-  for(const x of [-9,-6])box(room,x,1.8,3.55,.1,3.6,.1,'#a4b8ac');box(room,-7.5,3.55,3.55,3.1,.1,.1,'#a4b8ac');
+  const {panel,door,windowWall}=architecture;
+  windowWall(room,{x:-6.75,z:-10.9,length:18.3,finish:'brick'});
+  windowWall(room,{x:9.15,z:-10.9,length:13.5,finish:'plaster'});
+  panel(room,{axis:'z',x:-15.9,z:-5.3,length:10.8,finish:'glass'});
+  panel(room,{axis:'z',x:-15.9,z:7.2,length:7.3,finish:'brick'});
+  panel(room,{axis:'z',x:15.9,z:0,length:22,finish:'glass'});
+  panel(room,{axis:'z',x:2.4,z:-5.3,length:10.8,finish:'glass'});
+  panel(room,{axis:'z',x:10.5,z:-5.3,length:10.8,finish:'plaster'});
+  // Every room has a framed entrance from the marble circulation hall.
+  for(const [x,length,finish] of [[-8.25,15.3,'glass'],[2.1,.6,'wood'],[4,3.2,'brick'],[8.8,3.4,'brick'],[11.35,1.7,'plaster'],[15,1.8,'plaster']])panel(room,{x,z:.35,length,finish});
+  door(room,{x:.6,z:.35,width:2.4,name:'workspace'});
+  door(room,{x:6.35,z:.35,width:1.5,name:'pantry',finish:'wood'});
+  door(room,{x:13.15,z:.35,width:1.9,name:'restroom',finish:'wood'});
+  for(const [x,length,finish] of [[-12.35,7.1,'glass'],[-3,6.4,'glass'],[3.7,2.6,'wood'],[11.6,8.6,'glass']])panel(room,{x,z:3.55,length,finish});
+  door(room,{x:-7.5,z:3.55,width:2.6,name:'meeting'});
+  door(room,{x:1.3,z:3.55,width:2.2,name:'gallery'});
+  door(room,{x:6.15,z:3.55,width:2.3,name:'lounge'});
+  panel(room,{axis:'z',x:2.4,z:7.25,length:7.3,finish:'wood'});
+  // Glazed garden-side walls enclose rooms without hiding the interior.
+  panel(room,{x:-7.9,z:10.9,length:16,finish:'glass'});
+  panel(room,{x:2.25,z:10.9,length:.3,finish:'glass'});
+  door(room,{x:1.1,z:10.9,width:2,name:'garden-gallery'});
+  panel(room,{x:4.9,z:10.9,length:5,finish:'glass'});
+  panel(room,{x:12.75,z:10.9,length:6.3,finish:'glass'});
+  door(room,{x:8.5,z:10.9,width:2.2,name:'lounge-garden'});
   // Pantry: coffee machines, mugs, fridge, snack shelf and a standing island.
-  solid(6.1,.65,-9.6,6,1.3,1.1,'#cbb38a');box(room,6.1,1.34,-9.6,6.2,.12,1.25,'#faf3df');
+  solid(6.1,.65,-9.6,6,1.3,1.1,'#cbb38a');box(room,6.1,1.34,-9.6,6.2,.12,1.25,'#e5e4dc','marble');
   for(const x of [5.1,7.5]){box(room,x,1.75,-9.65,.7,.75,.55,'#485b50');box(room,x,1.78,-9.34,.46,.3,.06,'#a4c8b8');box(room,x,1.47,-9.24,.2,.22,.19,'#f4e0ba');box(room,x+.15,1.98,-9.33,.06,.06,.03,'#e5b56d');}
   solid(9.5,1.15,-9.4,1.25,2.3,1.3,'#e6eee7');box(room,9.5,1.7,-8.72,1.17,.04,.04,'#b8c9bd');box(room,9.95,1.3,-8.7,.05,.6,.05,'#91aa9c');
   solid(9.65,.95,-4.2,.75,1.9,2.4,'#bca17c');for(let row=0;row<3;row++)for(let j=0;j<5;j++)box(room,9.22,.35+row*.55,-5+j*.4,.2,.3,.25,['#e7ba81','#a6b690','#dca69b'][row]);
-  solid(5.7,.9,-3.8,2.5,1.8,1,'#c5b08d');box(room,5.7,1.86,-3.8,2.7,.1,1.12,'#e8d8b6');
+  solid(5.7,.9,-3.8,2.5,1.8,1,'#c5b08d');box(room,5.7,1.86,-3.8,2.7,.1,1.12,'#e5e4dc','marble');
   box(room,5.1,1.95,-3.8,.35,.08,.3,'#ebe6d0');box(room,5.8,2,-3.8,.18,.25,.18,'#b1bd92');
   // Restroom: two enclosed stalls, visible doors, dual washbasins and mirrors.
   for(const x of [12.1,14.5]){
@@ -47,5 +72,10 @@ export function buildMap({room,box,plant}){
   for(const [x,z] of [[-14.8,-9.8],[1.3,-9.8],[-14.8,9.5],[14.8,9.6],[3.5,5],[8.9,-1.2]]){plant(room,x,z,1.05);obstacles.push({x,z,w:.7,d:.7});}
   // Reserve desk footprints for all 12 seats so later hires do not invalidate walking routes.
   for(let i=0;i<12;i++){const p=deskPosition(i);obstacles.push({x:p.x,z:p.z,w:2.1,d:1.15});}
-  return {obstacles,rooms:ROOMS};
+  buildCampus({room,upper,garden,stairs,structure,box,plant,obstacles,architecture});
+  buildBasement({basement,basementStairs,room,box,obstacles,architecture});
+  buildDeepCampus({deepFloors,room,box,obstacles,architecture});
+  buildHighFloors({highFloors,room,box,obstacles,architecture});
+  for(const floor of FLOOR_IDS){obstacles.push({floor,x:LIFT.x,z:LIFT.z,w:LIFT.w,d:LIFT.d});architecture.features.push({type:'elevator',floor,x:LIFT.x,z:LIFT.z});}
+  return {obstacles,rooms:ROOMS,architecture:architecture.features};
 }

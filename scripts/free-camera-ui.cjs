@@ -1,0 +1,31 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {EventEmitter}=require('node:events'),{Engine}=require('../electron/engine.cjs');
+(async()=>{
+ const {createServer}=await import('vite'),server=await createServer({configFile:false,server:{host:'127.0.0.1',port:5193,watch:{ignored:['**/release/**','**/test-results/**']}}});await server.listen();
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'office-camera-')),engine=new Engine(path.join(folder,'office.json'),new EventEmitter());engine.furnishOfficeOnce();let browser;
+ try{
+  browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const page=await browser.newPage({viewport:{width:1540,height:980}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.exposeFunction('getOffice',()=>({state:engine.snapshot(),connection:{}}));
+  await page.addInitScript(()=>{localStorage.setItem('pixelOffice.ambient','off');window.office={get:()=>window.getOffice(),onState:()=>{},onLive:()=>{},onConnection:()=>{},onVisibility:()=>{}};});
+  await page.route('**/favicon.ico',r=>r.fulfill({status:204,body:''}));await page.goto('http://127.0.0.1:5193');await page.waitForFunction(()=>window.readOfficeRenderStats?.().frames>0);
+  const stats=()=>page.evaluate(()=>window.readOfficeRenderStats()),dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i])),held=async(key,ms=600)=>{await page.keyboard.down(key);await page.waitForTimeout(ms);await page.keyboard.up(key);await page.waitForTimeout(150);};
+  await page.waitForTimeout(500);const original=await stats();await page.locator('#freeCamera').click();assert.equal((await stats()).cameraMode,'free');
+  const start=await stats();await page.keyboard.down('w');await page.waitForTimeout(500);const moving=await stats();assert.equal(moving.renderPixelRatio,1.25);await page.keyboard.up('w');await page.waitForFunction(()=>window.readOfficeRenderStats().renderPixelRatio===window.readOfficeRenderStats().pixelRatio);
+  const walked=await stats();assert.ok(dist(start.cameraPosition,walked.cameraPosition)>1);assert.equal(walked.renderPixelRatio,walked.pixelRatio);assert.equal(walked.game.uploads,start.game.uploads,'camera motion must reuse static NPC buffers');
+  const before=walked.cameraPosition;await held('r');assert.ok((await stats()).cameraPosition[1]>before[1]+1);await held('c');
+  const slowStart=(await stats()).cameraPosition;await held('d');const slow=dist(slowStart,(await stats()).cameraPosition);
+  const fastStart=(await stats()).cameraPosition;await page.keyboard.down('Shift');await held('d');await page.keyboard.up('Shift');const fast=dist(fastStart,(await stats()).cameraPosition);assert.ok(fast>slow*1.5);
+  const canvas=page.locator('#world canvas'),bounds=await canvas.boundingBox(),direction=(await stats()).cameraDirection;await page.mouse.move(bounds.x+700,bounds.y+420);await page.mouse.down({button:'right'});await page.mouse.move(bounds.x+850,bounds.y+470,{steps:10});await page.mouse.up({button:'right'});await page.waitForFunction(()=>window.readOfficeRenderStats().renderPixelRatio===window.readOfficeRenderStats().pixelRatio);assert.ok(dist(direction,(await stats()).cameraDirection)>.1);
+  const mission=page.locator('#mission');await mission.focus();const typed=(await stats()).cameraPosition;await mission.fill('wasd q e f');await held('w',300);assert.equal((await stats()).cameraMode,'free');assert.ok(dist(typed,(await stats()).cameraPosition)<.001);await mission.fill('');
+  await page.locator('#freeCamera').focus();await page.keyboard.down('w');await page.waitForTimeout(150);await page.evaluate(()=>window.dispatchEvent(new Event('blur')));const blurred=(await stats()).cameraPosition;await page.waitForTimeout(350);await page.keyboard.up('w');assert.ok(dist(blurred,(await stats()).cameraPosition)<.001);
+  await page.locator('[data-floor="-6"]').click();await page.waitForTimeout(250);const deep=await stats();assert.equal(deep.cameraMode,'free');assert.equal(deep.floor,'-6');assert.ok(Math.abs(deep.cameraPosition[1]+33.6)<.01);assert.ok(deep.drawCalls<180);
+  await page.keyboard.press('Escape');await page.waitForTimeout(250);assert.equal((await stats()).cameraMode,'orbit');assert.equal(await page.locator('#freeCamera').getAttribute('aria-pressed'),'false');
+  await page.keyboard.press('f');assert.equal((await stats()).cameraMode,'free');await page.keyboard.press('f');assert.equal((await stats()).cameraMode,'orbit');
+  await page.locator('[data-floor="1"]').click();await page.waitForTimeout(250);await page.locator('#freeCamera').click();await page.waitForTimeout(250);
+  fs.mkdirSync('test-results',{recursive:true});await page.screenshot({path:'test-results/free-camera-office.png'});await page.locator('[data-floor="-5"]').click();await page.waitForTimeout(250);await page.screenshot({path:'test-results/free-camera-mine.png'});
+  const idleStart=(await stats()).frames;await page.waitForTimeout(1000);assert.ok((await stats()).frames-idleStart<4,'idle camera must not render continuously');
+  await page.setViewportSize({width:650,height:800});await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:'test-results/free-camera-mobile.png'});
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({pass:true,slowDistance:slow,fastDistance:fast,staticNpcUploads:walked.game.uploads-start.game.uploads,movingPixelRatio:moving.renderPixelRatio,idlePixelRatio:walked.renderPixelRatio,mineDrawCalls:deep.drawCalls,checks:'WASD/RC/Shift, mouse look, typing safety, blur, F/Esc, floor changes, idle rendering, mobile'}));
+ }finally{clearTimeout(engine.changeTimer);await browser?.close();await server.close();fs.rmSync(folder,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,8 @@
+{
+  "hairStyles": { "short":"숏컷", "bob":"보브컷", "spiky":"스파이키", "ponytail":"포니테일", "bald":"민머리" },
+  "outfits": { "shirt":"기본 셔츠", "hoodie":"후드티", "jacket":"재킷" },
+  "accessories": { "none":"없음", "glasses":"안경", "headphones":"헤드폰" },
+  "legacyHair": ["#675146", "#403c42", "#9b6541", "#605244"],
+  "defaults": { "hairStyle":"short", "hairColor":"#675146", "skinColor":"#edc6a3", "shirtColor":"#82b7ee", "pantsColor":"#43546a", "shoeColor":"#f4eee2", "outfit":"shirt", "accessory":"none" },
+  "colors": { "hairColor":"머리색", "skinColor":"피부색", "shirtColor":"상의색", "pantsColor":"하의색", "shoeColor":"신발색" }
+}

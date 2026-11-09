@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "maxNpcs": 40,
+  "initialNpcs": 5,
+  "initialGold": 0,
+  "monsterFloors": [-5, -6],
+  "defaultMonsterCap": 6,
+  "maxMonsterCap": 12,
+  "globalMonsterCap": 24,
+  "maxDrops": 64,
+  "items": {
+    "coal": {"name":"석탄","price":4,"color":"#374045","kind":"mineral"},
+    "copper": {"name":"구리 광석","price":8,"color":"#b87d55","kind":"mineral"},
+    "iron": {"name":"철광석","price":12,"color":"#a0a6a0","kind":"mineral"},
+    "silver": {"name":"은광석","price":22,"color":"#c7d9df","kind":"mineral"},
+    "goldOre": {"name":"금광석","price":35,"color":"#d5b34f","kind":"mineral"},
+    "crystal": {"name":"수정","price":60,"color":"#91c5cd","kind":"mineral"},
+    "slimeGel": {"name":"슬라임 젤","price":8,"color":"#8ab57a","kind":"loot"},
+    "batWing": {"name":"동굴박쥐 날개","price":12,"color":"#9b88b4","kind":"loot"},
+    "monsterCore": {"name":"암석괴물 핵","price":30,"color":"#d29779","kind":"loot"}
+  },
+  "monsters": {
+    "slime":{"name":"동굴 슬라임","hp":18,"damage":3,"loot":"slimeGel","color":"#82b373","speed":0.9},
+    "bat":{"name":"동굴 박쥐","hp":14,"damage":2,"loot":"batWing","color":"#847296","speed":1.5},
+    "golem":{"name":"암석 괴물","hp":32,"damage":5,"loot":"monsterCore","color":"#7e8782","speed":0.65}
+  },
+  "jobs":{"miner":"채굴","guard":"전투","roamer":"일반 순찰"},
+  "mineSeconds": 8,
+  "spawnSeconds": 7,
+  "hireBase": 150,
+  "hireIncrement": 25
+}

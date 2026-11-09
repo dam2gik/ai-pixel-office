@@ -1,0 +1,50 @@
+const {focusRoom}=require('./room-navigation.cjs');
+// Real local furniture persistence + headless browser; no model calls.
+const {chromium}=require('playwright'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {EventEmitter}=require('node:events');
+const {Engine}=require('../electron/engine.cjs');
+(async()=>{
+  const {createServer}=await import('vite');const server=await createServer({configFile:false,server:{host:'127.0.0.1',port:5184}});await server.listen();
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'office-campus-ui-')),codex=new EventEmitter(),engine=new Engine(path.join(folder,'office.json'),codex);let browser;
+  try{
+    browser=await chromium.launch({channel:process.env.PIXEL_OFFICE_TEST_BROWSER||'msedge',headless:true,timeout:15000,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+    const page=await browser.newPage({viewport:{width:1540,height:980}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.exposeFunction('getOffice',()=>({state:engine.snapshot(),connection:{}}));
+    await page.exposeFunction('editOffice',(method,...args)=>({add:()=>engine.addFurniture(...args),move:()=>engine.moveFurniture(...args),remove:()=>engine.removeFurniture(...args),validate:()=>engine.validateFurniture(...args)})[method]());
+    engine.on('state',state=>page.evaluate(s=>window.emitState?.(s),state).catch(()=>{}));
+    await page.addInitScript(()=>{window.office={get:()=>window.getOffice(),onState:fn=>window.emitState=fn,onLive:()=>{},onConnection:()=>{},onVisibility:()=>{},furniture:input=>window.editOffice('add',input),moveFurniture:(...args)=>window.editOffice('move',...args),removeFurniture:id=>window.editOffice('remove',id),validateFurniture:(...args)=>window.editOffice('validate',...args)};});
+    await page.goto('http://127.0.0.1:5184');await page.waitForLoadState('networkidle');await page.waitForFunction(()=>window.readOfficeRenderStats?.().frames>0);
+    assert.equal(await page.locator('.world-fallback').count(),0);assert.ok((await page.evaluate(()=>window.readOfficeRenderStats())).rooms.includes('garden'));
+    await page.locator('#ambientToggle').click();await page.waitForTimeout(300);fs.mkdirSync('test-results',{recursive:true});
+    await page.screenshot({path:'test-results/campus-ground-floor.png'});
+    await page.locator('[data-floor="2"]').click();await page.waitForTimeout(300);assert.equal((await page.evaluate(()=>window.readOfficeRenderStats())).floor,'2');await page.screenshot({path:'test-results/campus-second-floor.png'});
+    await page.locator('[data-floor=all]').click();await page.waitForTimeout(300);await page.screenshot({path:'test-results/campus-building.png'});
+    await focusRoom(page,'garden');await page.waitForTimeout(300);await page.screenshot({path:'test-results/campus-garden.png'});
+    await page.locator('[data-floor="1"]').click();await page.locator('#menuToggle').click();await page.locator('#decorate').click();
+    await page.locator('.furniture-editor').waitFor({state:'visible'});assert.equal(await page.locator('.furniture-palette [data-furniture]').count(),Object.keys(require('../electron/furniture-layout.json').types).length);
+    await page.locator('#addFurnitureArea').selectOption('lobby');await page.locator('[data-furniture=plant]').click();await page.locator('#furnitureX').waitFor();
+    assert.equal(engine.state.furniture.length,1);const id=engine.state.furniture[0].id,initialX=engine.state.furniture[0].x;
+    await page.locator('[aria-label="가구 오른쪽으로 이동"]').click();await page.waitForFunction(x=>Number(document.querySelector('#furnitureX').value)===x,initialX+.5);
+    await page.locator('#rotateFurniture').click();await page.waitForFunction(()=>window.readOfficeRenderStats().furniture[0].rotation===90);
+    const safe=structuredClone(engine.state.furniture[0]);await page.locator('#furnitureX').fill('0');await page.locator('#furnitureZ').fill('12');await page.locator('#applyFurniturePosition').click();
+    await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('통로'));assert.deepEqual(engine.state.furniture[0],safe);
+    await page.locator('#furnitureFloor').selectOption('2');await page.waitForFunction(()=>window.readOfficeRenderStats().furniture[0].floor===2&&window.readOfficeRenderStats().floor==='2');
+    await page.locator('#furnitureFloor').selectOption('1');await page.waitForFunction(()=>window.readOfficeRenderStats().furniture[0].floor===1&&window.readOfficeRenderStats().floor==='1');
+    await page.waitForTimeout(350);
+    const before=structuredClone(engine.state.furniture[0]),start=await page.evaluate(()=>window.readOfficeRenderStats().furniture[0].screen),end=await page.evaluate(f=>window.projectOfficePoint(f.x+2,.65,f.z+.5),before);
+    await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(end.x,end.y,{steps:12});await page.waitForTimeout(100);await page.mouse.up();
+    await page.waitForFunction(x=>window.readOfficeRenderStats().furniture[0].x!==x,before.x,{timeout:5000});assert.equal(engine.state.furniture[0].id,id);
+    await page.screenshot({path:'test-results/campus-customizer.png'});
+    await page.locator('#deleteFurniture').click();await page.waitForFunction(()=>window.readOfficeRenderStats().furniture.length===0);
+    await page.locator('#addFurnitureFloor').selectOption('2');await page.locator('[data-furniture=sofa]').click();await page.locator('#furnitureX').waitFor();
+    await page.locator('[data-furniture=bench]').click();await page.waitForFunction(()=>window.readOfficeRenderStats().furniture.length===2);
+    const saved=structuredClone(engine.state.furniture);await page.reload();await page.waitForSelector('.team-chip');assert.deepEqual(new Engine(engine.file,codex).state.furniture,saved);
+    await page.locator('[data-floor="2"]').click();await page.locator('#menuToggle').click();await page.locator('#decorate').click();
+    await page.locator('[data-furniture-id]').last().click();await page.keyboard.press('Delete');await page.waitForFunction(()=>window.readOfficeRenderStats().furniture.length===1);
+    await page.locator('#closeFurnitureEditor').click();await focusRoom(page,'garden');await page.locator('#menuToggle').click();await page.locator('#decorate').click();
+    assert.equal(await page.locator('#addFurnitureArea').inputValue(),'garden');await page.locator('[data-furniture=planter]').click();await page.waitForFunction(()=>window.readOfficeRenderStats().furniture.length===2);assert.ok(engine.state.furniture.at(-1).z>16);
+    await page.setViewportSize({width:650,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    assert.deepEqual(errors,[]);console.log('PASS: floors, campus, garden, add/move/drag/rotate/floor-transfer/delete, protected paths, keyboard delete, saved layout, garden placement and mobile UI.');
+  }finally{clearTimeout(engine.changeTimer);await browser?.close();await server.close();fs.rmSync(folder,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "welcome-sofa",
+      "type": "privacySofa",
+      "floor": 1,
+      "area": "lobby",
+      "x": -12,
+      "z": 12,
+      "rotation": 0
+    },
+    {
+      "id": "welcome-table",
+      "type": "coffeeTable",
+      "floor": 1,
+      "area": "lobby",
+      "x": -12,
+      "z": 13.5,
+      "rotation": 0
+    },
+    {
+      "id": "welcome-chair",
+      "type": "armchair",
+      "floor": 1,
+      "area": "lobby",
+      "x": -9.7,
+      "z": 12.5,
+      "rotation": 270
+    },
+    {
+      "id": "welcome-lamp",
+      "type": "floorLamp",
+      "floor": 1,
+      "area": "lobby",
+      "x": -13.8,
+      "z": 12.7,
+      "rotation": 0
+    },
+    {
+      "id": "welcome-ottoman",
+      "type": "ottoman",
+      "floor": 1,
+      "area": "lobby",
+      "x": -8.1,
+      "z": 13.2,
+      "rotation": 0
+    },
+    {
+      "id": "lobby-storage",
+      "type": "sideboard",
+      "floor": 1,
+      "area": "lobby",
+      "x": -5.4,
+      "z": 12,
+      "rotation": 0
+    },
+    {
+      "id": "lobby-display",
+      "type": "displayShelf",
+      "floor": 1,
+      "area": "lobby",
+      "x": -2.9,
+      "z": 12.1,
+      "rotation": 0
+    },
+    {
+      "id": "lobby-cafe",
+      "type": "cafeSet",
+      "floor": 1,
+      "area": "lobby",
+      "x": 4.4,
+      "z": 12.7,
+      "rotation": 0
+    },
+    {
+      "id": "lobby-plant",
+      "type": "plant",
+      "floor": 1,
+      "area": "lobby",
+      "x": 6.4,
+      "z": 13.4,
+      "rotation": 0
+    },
+    {
+      "id": "lobby-reading-chair",
+      "type": "armchair",
+      "floor": 1,
+      "area": "lobby",
+      "x": 12,
+      "z": 12.4,
+      "rotation": 90
+    },
+    {
+      "id": "lobby-reading-table",
+      "type": "table",
+      "floor": 1,
+      "area": "lobby",
+      "x": 13.5,
+      "z": 12.9,
+      "rotation": 0
+    },
+    {
+      "id": "office-storage",
+      "type": "sideboard",
+      "floor": 1,
+      "area": "office-corner",
+      "x": 0.7,
+      "z": -7,
+      "rotation": 90
+    },
+    {
+      "id": "office-lamp",
+      "type": "floorLamp",
+      "floor": 1,
+      "area": "office-corner",
+      "x": 0.7,
+      "z": -5.1,
+      "rotation": 0
+    },
+    {
+      "id": "meeting-chair",
+      "type": "armchair",
+      "floor": 1,
+      "area": "meeting-corner",
+      "x": -1.6,
+      "z": 7,
+      "rotation": 90
+    },
+    {
+      "id": "meeting-ottoman",
+      "type": "ottoman",
+      "floor": 1,
+      "area": "meeting-corner",
+      "x": -1.6,
+      "z": 8.4,
+      "rotation": 0
+    },
+    {
+      "id": "sky-sofa",
+      "type": "privacySofa",
+      "floor": 2,
+      "area": "sky",
+      "x": -9,
+      "z": 9,
+      "rotation": 0
+    },
+    {
+      "id": "sky-table",
+      "type": "coffeeTable",
+      "floor": 2,
+      "area": "sky",
+      "x": -6.8,
+      "z": 9.2,
+      "rotation": 90
+    },
+    {
+      "id": "sky-chair",
+      "type": "armchair",
+      "floor": 2,
+      "area": "sky",
+      "x": -5.2,
+      "z": 9.2,
+      "rotation": 270
+    },
+    {
+      "id": "sky-lamp",
+      "type": "floorLamp",
+      "floor": 2,
+      "area": "sky",
+      "x": -11,
+      "z": 9.2,
+      "rotation": 0
+    },
+    {
+      "id": "sky-storage",
+      "type": "sideboard",
+      "floor": 2,
+      "area": "sky",
+      "x": 3.6,
+      "z": 9,
+      "rotation": 0
+    },
+    {
+      "id": "sky-cafe",
+      "type": "cafeSet",
+      "floor": 2,
+      "area": "sky",
+      "x": 7,
+      "z": 9.2,
+      "rotation": 0
+    },
+    {
+      "id": "sky-planter",
+      "type": "planter",
+      "floor": 2,
+      "area": "sky",
+      "x": 11,
+      "z": 9.2,
+      "rotation": 0
+    },
+    {
+      "id": "library-chair",
+      "type": "armchair",
+      "floor": 2,
+      "area": "library-corner",
+      "x": 14,
+      "z": -3.5,
+      "rotation": 270
+    },
+    {
+      "id": "library-ottoman",
+      "type": "ottoman",
+      "floor": 2,
+      "area": "library-corner",
+      "x": 14,
+      "z": -2.1,
+      "rotation": 0
+    },
+    {
+      "id": "library-shelf",
+      "type": "displayShelf",
+      "floor": 2,
+      "area": "library-corner",
+      "x": 14.5,
+      "z": -6.3,
+      "rotation": 0
+    },
+    {
+      "id": "library-lamp",
+      "type": "floorLamp",
+      "floor": 2,
+      "area": "library-corner",
+      "x": 15.4,
+      "z": -4,
+      "rotation": 0
+    },
+    {
+      "id": "garden-cafe",
+      "type": "cafeSet",
+      "floor": 1,
+      "area": "garden",
+      "x": 5,
+      "z": 17.4,
+      "rotation": 0
+    },
+    {
+      "id": "garden-seat",
+      "type": "bench",
+      "floor": 1,
+      "area": "garden",
+      "x": -5,
+      "z": 17.7,
+      "rotation": 0
+    },
+    {
+      "id": "garden-planter",
+      "type": "planter",
+      "floor": 1,
+      "area": "garden",
+      "x": -8,
+      "z": 17.3,
+      "rotation": 0
+    }
+  ]
+}

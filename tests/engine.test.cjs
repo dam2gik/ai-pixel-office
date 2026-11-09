@@ -27,7 +27,7 @@ test('parallel tasks pass predecessor outputs, then PM reports after all tasks',
   const {engine}=fixture(); let max=0;
   engine.on('state', s=>{max=Math.max(max,s.projects[0]?.tasks.filter(t=>t.status==='running').length||0);});
   const pid=engine.start('작은 앱 만들기'); await until(()=>!engine.active.size);
-  const p=engine.state.projects[0];assert.equal(p.id,pid);assert.equal(p.status,'completed');assert.equal(max,2);
+  const p=engine.state.projects[0];assert.equal(p.id,pid);assert.equal(p.status,'review');assert.equal(max,2);
   const [design,build,integrate,verify]=p.tasks;
   assert.ok(Date.parse(integrate.startedAt)>=Date.parse(design.completedAt));assert.ok(Date.parse(integrate.startedAt)>=Date.parse(build.completedAt));
   assert.ok(Date.parse(verify.startedAt)>=Date.parse(integrate.completedAt));assert.match(integrate.result,/화면과 사용자 흐름 설계/);
@@ -42,7 +42,7 @@ test('global concurrency cap is honored', async () => {
 test('one worker never receives overlapping tasks', async()=>{
   const {engine}=fixture();engine.state.agents=engine.state.agents.filter(a=>['pm','dev'].includes(a.id));
   let collision=false;engine.on('state',s=>{const workers=s.projects[0]?.tasks.filter(t=>t.status==='running').map(t=>t.agentId)||[];if(new Set(workers).size!==workers.length)collision=true;});
-  engine.start('single worker');await until(()=>!engine.active.size);assert.equal(collision,false);assert.equal(engine.state.projects[0].status,'completed');
+  engine.start('single worker');await until(()=>!engine.active.size);assert.equal(collision,false);assert.equal(engine.state.projects[0].status,'review');
 });
 test('failed predecessors block consumers and PM reports partial',async()=>{
   const {engine}=fixture();const original=engine.work.bind(engine);
@@ -55,7 +55,7 @@ test('steering reaches running worker; cancellation and resume finish pending wo
   await until(()=>engine.state.projects[0].tasks.some(t=>t.status==='running'));
   await engine.steer(pid,'dev','접근성을 우선해줘');assert.equal(engine.state.projects[0].tasks.find(t=>t.id==='build').corrections[0],'접근성을 우선해줘');
   await engine.stop(pid);await until(()=>!engine.active.size);assert.equal(engine.state.projects[0].status,'interrupted');assert.equal(engine.state.projects[0].report,'');
-  engine.resume(pid);await until(()=>!engine.active.size);assert.equal(engine.state.projects[0].status,'completed');
+  engine.resume(pid);await until(()=>!engine.active.size);assert.equal(engine.state.projects[0].status,'review');
 });
 test('restart marks in-flight work interrupted and preserves completed output',async()=>{
   const {engine,codex}=fixture();engine.state.projects=[{id:'p',status:'running',tasks:[{id:'a',status:'completed',result:'saved'},{id:'b',status:'running'}]}];engine.persist();

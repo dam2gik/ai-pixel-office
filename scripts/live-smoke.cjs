@@ -17,7 +17,7 @@ const { Engine } = require('../electron/engine.cjs');
     const p=engine.state.projects[0];const outputs=[];
     function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,entry.name);if(entry.isDirectory())walk(full);else if(entry.name==='COMBINED.txt')outputs.push(fs.readFileSync(full,'utf8').trim().replace(/\r/g,''));}}
     walk(p.directory);
-    const ok=p.status==='completed'&&max>=2&&outputs.some(s=>s==='BLUE\nGREEN');
+    const ok=p.status==='review'&&max>=2&&outputs.some(s=>s==='BLUE\nGREEN');
     console.log(JSON.stringify({status:p.status,parallelPeak:max,handoffs:engine.state.events.filter(e=>e.type==='handoff').length,verifiedCombined:outputs.some(s=>s==='BLUE\nGREEN'),reportCreated:!!p.report,error:p.error||null,artifactDirectory:p.directory}));
     if(!ok)process.exitCode=1;
   }catch(e){console.error(e.message);process.exitCode=1;}finally{codex.close();}

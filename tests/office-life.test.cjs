@@ -27,3 +27,15 @@ test('ambient pause returns actors home, survives new work, and resumes locally'
 test('adding staff preserves existing activity and does not reset a break',async()=>{
   const {OfficeLife,nav}=await setup(),life=new OfficeLife(nav);life.sync([{id:'a'}]);for(let i=0;i<80;i++)life.tick(.1);const before=life.snapshot()[0];life.sync([{id:'a'},{id:'b'}]);assert.deepEqual(life.snapshot()[0],before);assert.equal(life.people.size,2);
 });
+
+test('staff use the staircase to reach the second floor and return when work arrives mid-climb',async()=>{
+  const {OfficeLife,nav}=await setup(),life=new OfficeLife(nav);life.sync([{id:'reader'}]);const p=life.people.get('reader');p.transportPreference='stairs';
+  assert.equal(life.choose(p,'reading'),true);assert.ok(p.route.some(q=>q.transition));
+  for(let i=0;i<3000&&p.mode!=='resting';i++){life.tick(.1);assert.equal(nav.isBlocked(p.position),false);}
+  assert.equal(p.mode,'resting');assert.equal(p.position.floor,2);assert.equal(p.position.y,6);
+  life.goHome(p);let climbing=false;
+  for(let i=0;i<3000;i++){life.tick(.1);if(p.position.transition&&(p.position.y||0)>1&&(p.position.y||0)<5){climbing=true;break;}}
+  assert.equal(climbing,true);life.setWork({reader:'working'});
+  for(let i=0;i<3000&&p.mode!=='working';i++)life.tick(.1);
+  assert.equal(p.mode,'working');assert.equal(p.position.floor,1);assert.ok(Math.hypot(p.position.x-p.home.x,p.position.z-p.home.z)<.01);
+});
